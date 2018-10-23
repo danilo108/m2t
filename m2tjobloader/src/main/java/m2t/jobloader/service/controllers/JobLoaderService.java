@@ -16,6 +16,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+
+import javax.websocket.server.PathParam;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -39,6 +42,10 @@ import m2t.jobloader.dao.model.Job;
 import m2t.jobloader.dao.repositories.ClientRepository;
 import m2t.jobloader.dao.repositories.ContainerRepository;
 import m2t.jobloader.dao.repositories.JobRepository;
+import m2t.jobloader.service.controllers.model.CreateReportResponse;
+import m2t.jobloader.service.controllers.model.JobTranslator;
+import m2t.jobloader.service.controllers.model.ResponseErrorDetail;
+import m2t.jobloader.service.controllers.model.UpdateJobsResponse;
 import m2t.service.model.jobloader.BoxDTO;
 import m2t.service.model.jobloader.BoxTypeDTO;
 import m2t.service.model.jobloader.ContainerDTO;
@@ -47,6 +54,7 @@ import m2t.service.model.jobloader.CustomerDTO;
 import m2t.service.model.jobloader.DocketDTO;
 import m2t.service.model.jobloader.GetContainerResponseDTO;
 import m2t.service.model.jobloader.JobDTO;
+import m2t.service.model.reports.ClientReportDTO;
 import m2t.test.sheet.SheetsQuickstart;
 import m2t.util.dockeparser.controller.DocketParserController;
 import m2t.util.dockeparser.controller.DocketParserException;
@@ -62,6 +70,7 @@ public class JobLoaderService {
 	ContainerRepository containerRepository;
 	@Autowired
 	Configuration configuration;
+
 
 	@RequestMapping(path = "/jobloader/create", method = RequestMethod.POST)
 	public CreateOrReplaceContainerResponseDTO createOrReplaceContainer(
@@ -89,9 +98,50 @@ public class JobLoaderService {
 
 		return response;
 	}
+	
+	@RequestMapping(path="/reports/{containerNumber}/data")
+	public @ResponseBody CreateReportResponse extractContainerReportData(@PathVariable("containerNumber")String containerNumber) {
+		CreateReportResponse response = new CreateReportResponse();
+		response.setContainerNumber(containerNumber);
+		Container container = containerRepository.findByContainerNumber(containerNumber);
+		if(container == null) {
+			response.setFound(0);
+			response.setError(true);
+			response.getWarnings().add(new ResponseErrorDetail("WARNING", "Could not find the container " + containerNumber, ""));
+			return response;
+		}
+		response.setFound(1);
+		Map<String, ClientReportDTO> clients = new HashMap<>();
+		container.getJobs().stream().forEach(job -> {
+			
+			ClientReportDTO client = clients.get(job.getDeliverToCode() == null?job.getOriginalClient().getClientCode():job.getDeliverToCode());
+			if(client == null) {
+				client = new ClientReportDTO();
+				client.setClientName(job.getDeliverToCode());
+				client.setContainerNumber(containerNumber);
+				clients.put(job.getDeliverToCode(), client);
+			}
+			JobTranslator translator = new JobTranslator();
+			client.getJobs().add(translator.translateToDTO(job));
+			client.addFrames(job.getTotalFrames());
+			client.addHardware(job.getTotalHardware());
+			client.addPanels(job.getTotalPanels());
+			
+		});
+		List<ClientReportDTO> sorted = clients.values().stream()
+        .sorted((c1,c2)->{
+        	return new Integer(c2.getTotalBoxes()).compareTo(new Integer(c1.getTotalBoxes()));
+        }).collect(Collectors.toList());
+		response.setClientReports(sorted);
+		response.getClientNames().addAll(clients.keySet());
+		
+		return response;
+	}
+	
+	
 
-	@RequestMapping(path = "/test")
-	public @ResponseBody Map<String, String> test() throws GeneralSecurityException, IOException {
+	//@RequestMapping(path = "/test")
+	public Map<String, Object> test() throws GeneralSecurityException, IOException {
 		Map results = new HashMap<>();
 		Path directory = Paths.get(configuration.getTestDocketsFolder());
 		Files.list(directory).forEach(file -> {
@@ -121,6 +171,8 @@ public class JobLoaderService {
 			}
 
 		});
+		
+		
 
 		return results;
 	}

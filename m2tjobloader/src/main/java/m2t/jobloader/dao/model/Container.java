@@ -34,7 +34,18 @@ public class Container {
 	@Column(name="sheetId")
 	private String sheetId;
 	
+	@Column(name="fullURL")
+	private String fullURL;
+
 	
+	public String getFullURL() {
+		return fullURL;
+	}
+
+	public void setFullURL(String fullURL) {
+		this.fullURL = fullURL;
+	}
+
 	public String getSheetId() {
 		return sheetId;
 	}

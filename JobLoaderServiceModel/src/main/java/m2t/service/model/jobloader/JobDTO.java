@@ -11,14 +11,35 @@ public class JobDTO {
 	String jobDeliverTo;
 	String jobDeliveryAddress;
 	String jobOriginalDeliveryAddress;
+	String container;
 	
 	float size;
 	int totalBoxes;
 	int totalPanels;
 	int totalFrames;
 	int totalHardware;
+	String formattedSize;
 	
-	
+
+	public String getFormattedSize() {
+		return formattedSize;
+	}
+
+
+	public void setFormattedSize(String formattedSize) {
+		this.formattedSize = formattedSize;
+	}
+
+
+	public String getContainer() {
+		return container;
+	}
+
+
+	public void setContainer(String container) {
+		this.container = container;
+	}
+
 
 	public String getOriginalClientCode() {
 		return originalClientCode;

@@ -341,10 +341,13 @@ public class DocketParserController {
 	private String extracteClientCode(SearchResult searchResult) {
 		String clientCode = "";
 
-		for (String row : searchResult.getRows()) {
-
+		for (int index = 0; index < searchResult.getRows().size(); index++) {
+			String row = searchResult.getRows().get(index);
 			if (row.matches("[A-Z]\\d \\- [A-Z].*")) {
 				// thIS CONTAINS THE ACTUAL ZONE CODE S1 - SYD SO NEXT ROW IS THE CODE
+				if((index +1) < searchResult.getRows().size()) {
+					clientCode = normaliseClientCode(searchResult.getRows().get(index+1));
+				}
 				continue;
 			} else if (row.equals(D_ZONE)) {
 				continue;
@@ -366,6 +369,22 @@ public class DocketParserController {
 			}
 		}
 		return clientCode.trim();
+	}
+
+	private String normaliseClientCode(String row) {
+		String[] spaceSplitted = row.split(" ");
+		if(spaceSplitted.length >1) {
+			String lastWord = spaceSplitted[spaceSplitted.length-1];
+			if(StringUtils.isAllLowerCase(lastWord) || StringUtils.capitalize(lastWord).equals(lastWord)) {
+				//THere is the Metro from the DZONE section 
+				return StringUtils.substringBefore(row, lastWord).trim();
+			}else {
+				return row;
+			}
+			
+		}else {
+			return row;
+		}
 	}
 
 	private String extractAddress(SearchResult searchResult) {

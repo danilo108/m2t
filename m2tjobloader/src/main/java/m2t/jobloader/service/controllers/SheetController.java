@@ -1,24 +1,27 @@
 package m2t.jobloader.service.controllers;
 
 import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
-import org.apache.commons.codec.binary.StringUtils;
-import org.mortbay.util.StringUtil;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.api.services.drive.model.File;
 import com.google.api.services.drive.model.Permission;
 import com.google.api.services.sheets.v4.model.AppendValuesResponse;
+import com.google.api.services.sheets.v4.model.BatchUpdateSpreadsheetResponse;
+import com.google.api.services.sheets.v4.model.Request;
 import com.google.api.services.sheets.v4.model.ValueRange;
 
 import m2t.jobloader.configuration.Configuration;
@@ -28,10 +31,14 @@ import m2t.jobloader.dao.model.Job;
 import m2t.jobloader.dao.repositories.ClientRepository;
 import m2t.jobloader.dao.repositories.ContainerRepository;
 import m2t.jobloader.dao.repositories.JobRepository;
+import m2t.jobloader.reports.factory.ClientReportFactory;
+import m2t.jobloader.service.controllers.model.BasicServiceResponse;
+import m2t.jobloader.service.controllers.model.CreateReportResponse;
 import m2t.jobloader.service.controllers.model.JobUpdate;
 import m2t.jobloader.service.controllers.model.ResponseErrorDetail;
+import m2t.jobloader.service.controllers.model.SheetServiceContainerData;
 import m2t.jobloader.service.controllers.model.SheetServiceResponse;
-import m2t.jobloader.service.controllers.model.SheetServiceResponse.SheetServiceContainerData;
+import m2t.service.model.reports.ClientReportDTO;
 
 @RestController
 public class SheetController {
@@ -47,58 +54,122 @@ public class SheetController {
 
 	@Autowired
 	GoogleWrapper wrapper;
+	@Autowired
+	JobLoaderService jobLoaderService;
+	
+	@Autowired
+	ApplicationContext applicationContext;
+	
 
-	@RequestMapping(path = "jobloader/sheet/create")
-	@ResponseBody
-	public SheetServiceResponse createSheet(@RequestBody(required = true) CreateSheetRequest request) {
-		SheetServiceResponse response = new SheetServiceResponse();
-		for (String containerNumber : request.getContainerNumbers()) {
-			Container container = containerRepository.findByContainerNumber(containerNumber);
-			if (container == null) {
-				response.getWarnings().add(new ResponseErrorDetail("Warning",
-						"The container " + containerNumber + " is not in the db", request.toString()));
-				continue;
-			}
-			response.setFound(response.getFound() + 1);
-			if (container.getSheetId() == null) {
-				String sheetId;
-				try {
-					sheetId = duplicateFromTemplate(containerNumber, response);
-				} catch (IOException | GeneralSecurityException e2) {
-					response.setError(true);
-					response.setErrorDescription("Error while duplicating the template ");
-					response.getWarnings().add(new ResponseErrorDetail("Error", e2.getMessage(),
-							"Container number :" + containerNumber, e2));
-					return response;
-				}
-
-				container.setSheetId(sheetId);
-				List<Job> jobs = jobRepository.findByContainerOrderByTotalBoxesDesc(containerNumber);
-				try {
-					writeJobsOnSpreadSheet(sheetId, jobs, response);
-				} catch (IOException | GeneralSecurityException e) {
-					response.setError(true);
-					response.setErrorDescription("Error while updating the jobs in the template " + sheetId);
-					ObjectMapper mapper = new ObjectMapper();
-					String requestJson = "Job list parsing error";
-					try {
-						requestJson = mapper.writeValueAsString(jobs);
-					} catch (JsonProcessingException e1) {
-						response.getWarnings().add(new ResponseErrorDetail("Error",
-								"Error while parsing the list of jobs in request", e.getMessage(), e1));
-					}
-					response.getWarnings().add(new ResponseErrorDetail("Error", e.getMessage(), requestJson, e));
-				}
-
-				containerRepository.save(container);
-			}
-		}
-
-		return response;
-
+	public GoogleWrapper getWrapper() {
+		return wrapper;
 	}
 
-	private boolean writeJobsOnSpreadSheet(String sheetId, List<Job> jobs, SheetServiceResponse response)
+	public void setWrapper(GoogleWrapper wrapper) {
+		this.wrapper = wrapper;
+	}
+
+	@RequestMapping(path = "jobloader/sheet/{containerNumber}/create")
+	@ResponseBody
+	public BasicServiceResponse createSheet(@PathVariable("containerNumber")String containerNumber) {
+//		
+		SheetServiceResponse response = new SheetServiceResponse();
+		Container container = containerRepository.findByContainerNumber(containerNumber);
+		if (container == null) {
+			response.getWarnings().add(new ResponseErrorDetail("Warning",
+					"The container " + containerNumber + " is not in the db",""));
+			response.setFound(0);
+			response.setError(true);
+			return response;
+		}
+		response.setFound(response.getFound() + 1);
+		if (container.getSheetId() == null) {
+			String sheetId;
+			SheetServiceContainerData containerResponse;
+			try {
+				containerResponse = duplicateFromTemplate(containerNumber, response);
+			} catch (IOException | GeneralSecurityException e2) {
+				response.setError(true);
+				response.setErrorDescription("Error while duplicating the template ");
+				response.getWarnings().add(new ResponseErrorDetail("Error", e2.getMessage(),
+						"Container number :" + containerNumber, e2));
+				return response;
+			}
+			sheetId = containerResponse.getSheetId();
+			container.setSheetId(sheetId);
+			container.setFullURL(containerResponse.getSheetFullURL());
+			List<Job> jobs = jobRepository.findByContainerOrderByTotalBoxesDesc(containerNumber);
+			try {
+				writeJobsOnSpreadSheet(sheetId, jobs, response);
+			} catch (IOException | GeneralSecurityException e) {
+				response.setError(true);
+				response.setErrorDescription("Error while updating the jobs in the template " + sheetId);
+				
+				response.getWarnings().add(new ResponseErrorDetail("Error", e.getMessage(), jobs , e));
+			}
+
+			containerRepository.save(container);
+			
+		}else {
+			response.getContainerResponse().add(new SheetServiceContainerData(container.getSheetId(), container.getFullURL(), containerNumber));
+		}	
+		
+		
+		return response;
+	}
+	
+	@RequestMapping("/reports/{containerNumber}/sheet")
+	@ResponseBody
+	public CreateReportResponse createReport(@PathVariable("containerNumber") String containerNumber) {
+		
+		CreateReportResponse response = jobLoaderService.extractContainerReportData(containerNumber);
+		if(response.getFound() == 0 || response.isError()) {
+			return response;
+		}
+		String sheetId;
+		try {
+			sheetId = duplicateFromClientReportTemplate(containerNumber, response);
+		} catch (IOException | GeneralSecurityException e) {
+			response.setError(true);
+			response.getWarnings().add(new ResponseErrorDetail("ERROR", "Error while duplicating the Client Report Template", e.getMessage(), e));
+			return response;
+		}
+		
+		writeReport(sheetId, response);
+		return response;
+	}
+
+
+	private void writeReport(String sheetId, CreateReportResponse response) {
+	
+		
+		
+		List<Request> sheetsRequests = applicationContext.getBean(ClientReportFactory.class).getCreateSheetsRequest(response.getClientReports());
+		try {
+			BatchUpdateSpreadsheetResponse result = wrapper.executeBatchUpdate(sheetId, sheetsRequests);
+		} catch (IOException | GeneralSecurityException e) {
+			response.setError(true);
+			e.printStackTrace();
+			response.getWarnings().add(new ResponseErrorDetail("ERROR", "Error creating the sheets for the clientReport", sheetsRequests, e));
+			return;
+		}
+		List<Request> requests = new ArrayList<>();
+		for (int i = 0; i < response.getClientReports().size(); i++) {
+			ClientReportDTO report = response.getClientReports().get(i);
+			ClientReportFactory clientReportFactory = applicationContext.getBean(ClientReportFactory.class);
+			requests.addAll(clientReportFactory.getRequestForDealer(report,i));
+		}
+		
+		try {
+			BatchUpdateSpreadsheetResponse result = wrapper.executeBatchUpdate(sheetId, requests);
+		} catch (IOException | GeneralSecurityException e) {
+			response.setError(true);
+			e.printStackTrace();
+			response.getWarnings().add(new ResponseErrorDetail("ERROR", "Error generating the Client Report", requests, e));
+		}
+	}
+
+	private boolean writeJobsOnSpreadSheet(String sheetId, List<Job> jobs, BasicServiceResponse response)
 			throws IOException, GeneralSecurityException {
 		List<List<Object>> values = new ArrayList<>();
 		for (Job job : jobs) {
@@ -163,16 +234,36 @@ public class SheetController {
 			if ("SUMMARY".equals(column)) {
 				row.add(configuration.getSummaryFunction());
 			}
-
+			if ("DELIVER TO".equals(column)) {
+				row.add(configuration.getDeliverToFunction());
+			}
 		}
 		return row;
 	}
 
-	@RequestMapping(path = "jobloader/sheet/{sheetId}update")
+	@RequestMapping(path = "jobloader/sheet/{containerNumber}/update")
 	@ResponseBody
-	public SheetServiceResponse createSheet(@PathVariable(name = "sheetId") String sheetId) {
+	public SheetServiceResponse updateSheet(@PathVariable(name = "containerNumber") String containerNumber) {
 		SheetServiceResponse response = new SheetServiceResponse();
-		List<JobUpdate> rows = getJobUpdates(sheetId);
+		Container container = containerRepository.findByContainerNumber(containerNumber);
+		if (container == null) {
+			response.setFound(0);
+			response.getWarnings()
+					.add(new ResponseErrorDetail("ERROR", "Could not find any container " + containerNumber, ""));
+			return response;
+		} else if (StringUtils.isBlank(container.getSheetId())) {
+			response.setFound(0);
+			response.getWarnings().add(new ResponseErrorDetail("ERROR",
+					"Could not find any sheetId for container " + containerNumber, container.toString()));
+			return response;
+		}
+		response.setFound(1);
+
+		String sheetId = container.getSheetId();
+		List<JobUpdate> rows = getJobUpdates(sheetId, response, container);
+		if (rows == null) {
+			return response;
+		}
 		for (JobUpdate update : rows) {
 			Job job = jobRepository.findByJobCode(update.getJobId());
 			if (job == null) {
@@ -191,53 +282,87 @@ public class SheetController {
 					job.setDeliverTo(client);
 
 				}
-
+				job.setDeliverToCode(update.getDeliverTo());
 			}
 			job.setDeliveryAddress(update.getDeliveryAddress());
 			jobRepository.save(job);
 
 		}
 
-		return null;
+		return response;
 	}
 
-	private List<JobUpdate> getJobUpdates(String sheetId) {
-		ValueRange values = wrapper.getValueRange(sheetId, configuration.getGoogleSheetTemplateJobSheetUpdatesRange());
+	private List<JobUpdate> getJobUpdates(String sheetId, BasicServiceResponse response, Container container) {
+		ValueRange values;
+		String range = configuration.getReadUpdateRange() + (container.getJobs().size()+1);
+		
+		
+		try {
+
+			values = wrapper.getValueRange(sheetId, range);
+		} catch (IOException | GeneralSecurityException e) {
+			e.printStackTrace();
+			response.setError(true);
+			response.getWarnings().add(new ResponseErrorDetail("ERROR",
+					"Error getting the values from the sheetId " + sheetId + " and range " + range, "", e));
+			return null;
+		}
 		List<JobUpdate> updates = new ArrayList<>();
 		int ctr = 0;
 		for (List<Object> row : values.getValues()) {
-			JobUpdate job = new JobUpdate();
-			job.setJobId(row.get(configuration.getJobIdColumnNumber()) != null
-					? row.get(configuration.getJobIdColumnNumber()).toString()
-					: null);
-			job.setDeliverTo(row.get(configuration.getDeliverToColumnNumber()) != null
-					? row.get(configuration.getDeliverToColumnNumber()).toString()
-					: null);
-			job.setDeliveryAddress(row.get(configuration.getDeliveryAddressColumnNumber()) != null
-					? row.get(configuration.getDeliveryAddressColumnNumber()).toString()
-					: null);
-			job.setNotes(row.get(configuration.getNotesColumnNumber()) != null
-					? row.get(configuration.getNotesColumnNumber()).toString()
-					: null);
-			updates.add(job);
+			try {
+				JobUpdate job = new JobUpdate();
+				job.setJobId(row.get(configuration.getJobIdColumnNumber()) != null
+						? row.get(configuration.getJobIdColumnNumber()).toString()
+						: null);
+				job.setDeliverTo(row.get(configuration.getDeliverToColumnNumber()) != null
+						? row.get(configuration.getDeliverToColumnNumber()).toString()
+						: null);
+//			job.setDeliveryAddress(row.get(configuration.getDeliveryAddressColumnNumber()) != null
+//					? row.get(configuration.getDeliveryAddressColumnNumber()).toString()
+//					: null);
+//			job.setNotes(row.get(configuration.getNotesColumnNumber()) != null
+//					? row.get(configuration.getNotesColumnNumber()).toString()
+//					: null);
+				updates.add(job);
+			} catch (Exception e) {
+				response.getWarnings().add(new ResponseErrorDetail("ERROR", "Error while parsing the row", row, e));
+			}
 			ctr++;
 		}
 
 		return updates;
 	}
 
-	private String duplicateFromTemplate(String containerNumber, SheetServiceResponse response)
+	private String duplicateFromClientReportTemplate(String containerNumber, CreateReportResponse response)
+			throws IOException, GeneralSecurityException {
+
+		List<Permission> permissions = getTemplateCopyPermissions();
+		File result = wrapper.duplicateFromTemplate(configuration.getClientReportSheetId(), containerNumber + " Client Report", permissions);
+
+		String sheetId = result.getId();
+		String webContentLink = result.getWebViewLink();
+		response.setSheetFullURL(webContentLink);
+		response.setSheetId(sheetId);
+		return sheetId;
+	}
+	
+	private SheetServiceContainerData duplicateFromTemplate(String containerNumber, SheetServiceResponse response)
 			throws IOException, GeneralSecurityException {
 
 		List<Permission> permissions = getTemplateCopyPermissions();
 		File result = wrapper.duplicateFromTemplate(configuration.getTemplateId(), containerNumber, permissions);
-
+	
 		String sheetId = result.getId();
 		String webContentLink = result.getWebViewLink();
-		response.getContainerResponse().add(new SheetServiceContainerData(sheetId, webContentLink, containerNumber));
+	
+		SheetServiceContainerData sheetServiceContainerData = new SheetServiceContainerData(sheetId, webContentLink, containerNumber);
+		response.getContainerResponse().add(sheetServiceContainerData);
 
-		return sheetId;
+		return sheetServiceContainerData;
 	}
+	
+	
 
 	private List<Permission> getTemplateCopyPermissions() {
 		List<Permission> permissions = new ArrayList<>();
@@ -255,6 +380,21 @@ public class SheetController {
 		return permissions;
 	}
 
+	private List<Permission> getTemplateClientReportCopyPermissions() {
+		List<Permission> permissions = new ArrayList<>();
+		permissions.add(createPermission("user", "owner", configuration.getTemplateClientReportPermissionOwner()));
+		if (!configuration.getTemplateClientReportPermissionWriter().trim().equals("none")) {
+			for (String email : configuration.getTemplateClientReportPermissionWriter().split(",")) {
+				permissions.add(createPermission("user", "writer", email));
+			}
+		}
+		if (!configuration.getTemplateClientReportPermissionReader().trim().equals("none")) {
+			for (String email : configuration.getTemplateClientReportPermissionReader().split(",")) {
+				permissions.add(createPermission("user", "reader", email));
+			}
+		}
+		return permissions;
+	}
 	private Permission createPermission(String type, String role, String email) {
 		Permission p = new Permission();
 		p.setType(type);

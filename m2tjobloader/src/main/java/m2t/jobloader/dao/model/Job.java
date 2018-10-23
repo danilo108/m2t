@@ -38,7 +38,8 @@ public class Job {
 	@Column(name="ORIGINAL_DELIVERY_ADDRESS")
 	private String originalDeliveryAddress;
 	
-	
+	@Column(name="DELIVERY_TO_CODE")
+	private String deliverToCode;
 	
 	@Column(name="TOT_BOXES")
 	private int totalBoxes;
@@ -72,6 +73,14 @@ public class Job {
 	}
 	
 	
+
+	public String getDeliverToCode() {
+		return deliverToCode;
+	}
+
+	public void setDeliverToCode(String deliverToCode) {
+		this.deliverToCode = deliverToCode;
+	}
 
 	public String getJobClient() {
 		return jobClient;
