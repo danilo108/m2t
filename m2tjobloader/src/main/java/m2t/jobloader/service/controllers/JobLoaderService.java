@@ -37,6 +37,7 @@ import com.itextpdf.text.pdf.parser.PdfTextExtractor;
 
 import m2t.jobloader.configuration.Configuration;
 import m2t.jobloader.dao.model.Client;
+import m2t.jobloader.dao.model.ClientType;
 import m2t.jobloader.dao.model.Container;
 import m2t.jobloader.dao.model.Job;
 import m2t.jobloader.dao.repositories.ClientRepository;
@@ -119,13 +120,16 @@ public class JobLoaderService {
 				client = new ClientReportDTO();
 				client.setClientName(job.getDeliverToCode());
 				client.setContainerNumber(containerNumber);
+				client.setInstaller(isInstaller(job.getDeliverToCode()));
 				clients.put(job.getDeliverToCode(), client);
 			}
 			JobTranslator translator = new JobTranslator();
+			
 			client.getJobs().add(translator.translateToDTO(job));
 			client.addFrames(job.getTotalFrames());
 			client.addHardware(job.getTotalHardware());
 			client.addPanels(job.getTotalPanels());
+			
 			
 		});
 		List<ClientReportDTO> sorted = clients.values().stream()
@@ -134,11 +138,16 @@ public class JobLoaderService {
         }).collect(Collectors.toList());
 		response.setClientReports(sorted);
 		response.getClientNames().addAll(clients.keySet());
-		
+	//sorted.stream().filter((r)->{return r.getJobs().size() > 0;});
 		return response;
 	}
 	
 	
+
+	private boolean isInstaller(String deliverToCode) {
+		
+		return clientRepository.findByClientCodeAndClientType(deliverToCode, ClientType.DEALER) == null;
+	}
 
 	//@RequestMapping(path = "/test")
 	public Map<String, Object> test() throws GeneralSecurityException, IOException {

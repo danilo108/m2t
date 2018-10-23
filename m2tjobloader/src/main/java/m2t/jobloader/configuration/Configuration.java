@@ -135,8 +135,44 @@ public class Configuration {
 	@Value("${m2t.googlesheet.template.clientReport.format.dealer.column3Width}")
 	private int clientReportDealerColumn3Width;
 	
+	@Value("${m2t.googlesheet.template.clientReport.format.installer.column1Width}")
+	private int clientReportInstallerColumn1Width;
+	
+	@Value("${m2t.googlesheet.template.clientReport.format.installer.column2Width}")
+	private int clientReportInstallerColumn2Width;
+	
+	@Value("${m2t.googlesheet.template.clientReport.format.installer.column3Width}")
+	private int clientReportInstallerColumn3Width;
 	
 	
+	@Value("${m2t.googlesheet.template.clientReport.format.installer.clientCode}")
+	private String clientReportInstallerStyleClientCode;	
+	
+	
+	public int getClientReportInstallerColumn1Width() {
+		return clientReportInstallerColumn1Width;
+	}
+	public void setClientReportInstallerColumn1Width(int clientReportInstallerColumn1Width) {
+		this.clientReportInstallerColumn1Width = clientReportInstallerColumn1Width;
+	}
+	public int getClientReportInstallerColumn2Width() {
+		return clientReportInstallerColumn2Width;
+	}
+	public void setClientReportInstallerColumn2Width(int clientReportInstallerColumn2Width) {
+		this.clientReportInstallerColumn2Width = clientReportInstallerColumn2Width;
+	}
+	public int getClientReportInstallerColumn3Width() {
+		return clientReportInstallerColumn3Width;
+	}
+	public void setClientReportInstallerColumn3Width(int clientReportInstallerColumn3Width) {
+		this.clientReportInstallerColumn3Width = clientReportInstallerColumn3Width;
+	}
+	public String getClientReportInstallerStyleClientCode() {
+		return clientReportInstallerStyleClientCode;
+	}
+	public void setClientReportInstallerStyleClientCode(String clientReportInstallerStyleClientCode) {
+		this.clientReportInstallerStyleClientCode = clientReportInstallerStyleClientCode;
+	}
 	public int getClientReportDealerColumn1Width() {
 		return clientReportDealerColumn1Width;
 	}

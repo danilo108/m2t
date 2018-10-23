@@ -157,7 +157,7 @@ public class SheetController {
 		for (int i = 0; i < response.getClientReports().size(); i++) {
 			ClientReportDTO report = response.getClientReports().get(i);
 			ClientReportFactory clientReportFactory = applicationContext.getBean(ClientReportFactory.class);
-			requests.addAll(clientReportFactory.getRequestForDealer(report,i));
+			requests.addAll(report.isInstaller()?clientReportFactory.getRequestForInstaller(report, i):clientReportFactory.getRequestForDealer(report,i));
 		}
 		
 		try {

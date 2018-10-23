@@ -23,7 +23,7 @@ public class Client {
 	String address;
 	@Enumerated(EnumType.STRING)
 	@Column(name="CLIENT_TYPE")
-	ClientType clientType;
+	ClientType clientType = ClientType.DEALER;
 	
 	@Enumerated(EnumType.STRING)
 	@Column(name="DEFAULT_ZONE")
@@ -40,6 +40,8 @@ public class Client {
 	
 	@Column(name="LOCK")
 	String lock;
+	
+
 
 	public Long getId() {
 		return id;

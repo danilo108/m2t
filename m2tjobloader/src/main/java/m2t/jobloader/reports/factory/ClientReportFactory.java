@@ -84,26 +84,37 @@ public class ClientReportFactory {
 		list.addAll(getDealerJobs(data, sheetNumber));
 		list.addAll(getColumn1DealerSizeRequests(data, sheetNumber));
 
-		// The spacer has to be a filler counting the number of rows remaining to
-		// complete a page
-		// You can calculate that from the title + jobs.size. Since you know how many
-		// rows this report
-		// takes you could also adjust the font size and row height for the job rows.
-
-		// By the way, your requests should include the row height ...good luck!!
-		// Make startRow a property of this class so if you need to print 2 pages for a
-		// report you can increase startRow
-		// and then you get it back for the next report
 		return list;
 	}
 
-	
+	public List<Request> getRequestForInstaller(ClientReportDTO data, int sheetNumber) {
+		List<Request> list = new ArrayList<>();
+
+		
+		list.addAll(getInstallerTitle(data, sheetNumber));
+		this.startRow++;
+		list.addAll(getInstallerJobs(data, sheetNumber));
+		list.addAll(getColumn1InstallerSizeRequests(data, sheetNumber));
+
+		return list;
+	}
+
 
 	private List<Request> getColumn1DealerSizeRequests(ClientReportDTO data, int sheetNumber) {
 		List<Request> requests = new ArrayList<>();
 		requests.add(getSizeCellRequest(100 + sheetNumber, true, 0, 1, configuration.getClientReportDealerColumn1Width()));
 		requests.add(getSizeCellRequest(100 + sheetNumber, true, 1, 2, configuration.getClientReportDealerColumn2Width()));
 		requests.add(getSizeCellRequest(100 + sheetNumber, true, 2, 3, configuration.getClientReportDealerColumn3Width()));
+		requests.add(getSizeCellRequest(100 + sheetNumber, false, 0, 1, configuration.getClientReportDealerTitleRowHeight()));
+		requests.add(getSizeCellRequest(100 + sheetNumber, false, 2, data.getJobs().size() + 2, configuration.getClientReportDealerJobsRowHeight()));
+		return requests;
+	}
+	private List<Request> getColumn1InstallerSizeRequests(ClientReportDTO data, int sheetNumber) {
+		List<Request> requests = new ArrayList<>();
+		requests.add(getSizeCellRequest(100 + sheetNumber, true, 0, 1, configuration.getClientReportInstallerColumn1Width()));
+		requests.add(getSizeCellRequest(100 + sheetNumber, true, 1, 2, configuration.getClientReportInstallerColumn2Width()));
+		requests.add(getSizeCellRequest(100 + sheetNumber, true, 2, 3, configuration.getClientReportInstallerColumn3Width()));
+		requests.add(getSizeCellRequest(100 + sheetNumber, true, 3, 4, configuration.getClientReportInstallerColumn3Width()));
 		requests.add(getSizeCellRequest(100 + sheetNumber, false, 0, 1, configuration.getClientReportDealerTitleRowHeight()));
 		requests.add(getSizeCellRequest(100 + sheetNumber, false, 2, data.getJobs().size() + 2, configuration.getClientReportDealerJobsRowHeight()));
 		return requests;
@@ -170,6 +181,36 @@ public class ClientReportFactory {
 //		requests.add(getSpacer(sheetNumber, numOfSpaceRows));
 		return requests;
 	}
+	
+	private List<Request> getInstallerJobs(ClientReportDTO data, int sheetNumber) {
+
+		List<Request> requests = new ArrayList<>();
+		int jobRows = 0;
+		for (int i = 0; i < data.getJobs().size(); i++) {
+
+			if (i % configuration.getClientReportDealerJobsPerRow().intValue() == 0 && i != 0) {
+				// next printing page
+				requests.addAll(getDealerTitle(data, sheetNumber));
+				requests.add(getRowHeightRequest(sheetNumber, configuration.getClientReportDealerJobsRowHeight(),
+						new Integer(this.startRow), new Integer(this.startRow + 1 + jobRows)));
+				jobRows = 0;
+				this.startRow++;
+
+			}
+
+			JobDTO job = data.getJobs().get(i);
+			this.startRow++;
+			requests.add(getJobNumberCell(job, sheetNumber, this.startRow));
+			requests.add(getJobCode(job, sheetNumber, startRow));	
+			requests.add(getJobClientCell(job, sheetNumber, this.startRow, true));
+			requests.add(getJobSummaryCell(job, sheetNumber, this.startRow, true));
+			jobRows++;
+
+		}
+//		int numOfSpaceRows = configuration.getClientReportDealerJobsPerRow().intValue() - jobRows;
+//		requests.add(getSpacer(sheetNumber, numOfSpaceRows));
+		return requests;
+	}
 
 	private Request getSpacer(int sheetNumber, int numOfSpaceRows) {
 		Request request = getRowHeightRequest(sheetNumber, configuration.getClientReportSpaceRowHeight(), this.startRow,
@@ -229,12 +270,20 @@ public class ClientReportFactory {
 		List<Request> requests = new ArrayList<>();
 
 		requests.add(getContainerCell(data.getContainerNumber(), sheetNumber, this.startRow));
-		requests.add(getClientCodeCell(data, sheetNumber, this.startRow));
-		requests.add(getTotalSummaryCell(data, sheetNumber, this.startRow));
+		requests.add(getClientCodeCellDealer(data, sheetNumber, this.startRow));
+		requests.add(getDealerTotalSummaryCell(data, sheetNumber, this.startRow));
 		requests.add(getRowHeightRequestForTitle(sheetNumber, this.startRow));
 		return requests;
 	}
+	private List<Request> getInstallerTitle(ClientReportDTO data, int sheetNumber) {
+		List<Request> requests = new ArrayList<>();
 
+		requests.add(getContainerCell(data.getContainerNumber(), sheetNumber, this.startRow));
+		requests.add(getClientCodeCellInstaller(data, sheetNumber, this.startRow));
+		requests.add(getInstallerTotalSummaryCell(data, sheetNumber, this.startRow));
+		requests.add(getRowHeightRequestForTitle(sheetNumber, this.startRow));
+		return requests;
+	}
 	private Request getRowHeightRequestForTitle(int sheetNumber, int startRow) {
 
 		Integer rowHeight = configuration.getClientReportDealerTitleRowHeight();
@@ -250,8 +299,18 @@ public class ClientReportFactory {
 						.setEndIndex(endIndex))
 				.setFields("pixelSize").setProperties(new DimensionProperties().setPixelSize(rowHeight)));
 	}
+	private Request getInstallerTotalSummaryCell(ClientReportDTO data, int sheetNumber, int startRow) {
+		String value = formatSummary(data.getTotalPanels(), "", data.getTotalFrames(), data.getTotalHardware());
+		int rowStart = startRow;
+		int rowEnd = startRow + 1;
+		int columnStart = 3;
+		int columnEnd = 4;
+		String style = configuration.getClientReportStyleForDealerTotalSummary();
+		Request request = createRequest(value, sheetNumber, rowStart, rowEnd, columnStart, columnEnd, style);
+		return request;
+	}
 
-	private Request getTotalSummaryCell(ClientReportDTO data, int sheetNumber, int startRow) {
+	private Request getDealerTotalSummaryCell(ClientReportDTO data, int sheetNumber, int startRow) {
 		String value = formatSummary(data.getTotalPanels(), "", data.getTotalFrames(), data.getTotalHardware());
 		int rowStart = startRow;
 		int rowEnd = startRow + 1;
@@ -305,13 +364,23 @@ public class ClientReportFactory {
 		return sb.toString();
 	}
 
-	private Request getClientCodeCell(ClientReportDTO data, int sheetNumber, int startRow) {
+	private Request getClientCodeCellDealer(ClientReportDTO data, int sheetNumber, int startRow) {
 		String value = data.getClientName() + " " + data.getTotalBoxes();
 		int rowStart = startRow;
 		int rowEnd = startRow + 1;
 		int columnStart = 1;
 		int columnEnd = 2;
 		String style = configuration.getClientReportStyleForDealerClientCode();
+		Request request = createRequest(value, sheetNumber, rowStart, rowEnd, columnStart, columnEnd, style);
+		return request;
+	}
+	private Request getClientCodeCellInstaller(ClientReportDTO data, int sheetNumber, int startRow) {
+		String value = data.getClientName() + " " + data.getTotalBoxes();
+		int rowStart = startRow;
+		int rowEnd = startRow + 1;
+		int columnStart = 2;
+		int columnEnd = 3;
+		String style = configuration.getClientReportInstallerStyleClientCode();
 		Request request = createRequest(value, sheetNumber, rowStart, rowEnd, columnStart, columnEnd, style);
 		return request;
 	}
