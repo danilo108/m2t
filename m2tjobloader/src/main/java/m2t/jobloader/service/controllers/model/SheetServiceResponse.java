@@ -3,7 +3,9 @@ package m2t.jobloader.service.controllers.model;
 import java.util.ArrayList;
 import java.util.List;
 
-public class SheetServiceResponse extends BasicServiceResponse {
+import m2t.jobloader.reports.factory.ReportFactoryResponse;
+
+public class SheetServiceResponse extends ReportFactoryResponse {
 	
 	
 	private SheetServiceResponseData data = new SheetServiceResponseData();
@@ -11,8 +13,9 @@ public class SheetServiceResponse extends BasicServiceResponse {
 
 
 
-	public SheetServiceResponse() {
-		warnings = new ArrayList<>();
+	public SheetServiceResponse(String operationName) {
+		super(operationName);
+	
 		data.containerResponse = new ArrayList<>();
 	}
 	public List<SheetServiceContainerData> getContainerResponse() {

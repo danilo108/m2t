@@ -91,6 +91,15 @@ public class ResponseErrorDetail {
 		this.details = details;
 	}
 	
-	
+	@Override
+	public String toString() {
+		try {
+			ObjectMapper om = new ObjectMapper();
+			return om.writerWithDefaultPrettyPrinter().writeValueAsString(this);
+		} catch (JsonProcessingException e) {
+			return super.toString();
+		}
+		
+	}
 
 }

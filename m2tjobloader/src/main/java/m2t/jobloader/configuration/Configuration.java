@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class Configuration {
 
+
 	@Value("${m2t.googlesheet.url.prefix}")
 	private String googleSheetPrefix;
 
@@ -144,11 +145,19 @@ public class Configuration {
 	@Value("${m2t.googlesheet.template.clientReport.format.installer.column3Width}")
 	private int clientReportInstallerColumn3Width;
 	
+	@Value("${m2t.googlesheet.template.clientReport.format.installer.column4Width}")
+	private int clientReportInstallerColumn4Width;
 	
 	@Value("${m2t.googlesheet.template.clientReport.format.installer.clientCode}")
 	private String clientReportInstallerStyleClientCode;	
 	
 	
+	public int getClientReportInstallerColumn4Width() {
+		return clientReportInstallerColumn4Width;
+	}
+	public void setClientReportInstallerColumn4Width(int clientReportInstallerColumn4Width) {
+		this.clientReportInstallerColumn4Width = clientReportInstallerColumn4Width;
+	}
 	public int getClientReportInstallerColumn1Width() {
 		return clientReportInstallerColumn1Width;
 	}

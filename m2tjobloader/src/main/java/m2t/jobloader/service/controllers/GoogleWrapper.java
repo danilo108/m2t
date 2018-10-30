@@ -115,6 +115,37 @@ public class GoogleWrapper {
 		return fileInfo;
 	}
 
+	public File createNewSpreadSheet(String title, List<Permission> permissions) throws IOException, GeneralSecurityException {
+		//416941295201-vl3k5sbvvh6qe42og1cgokvlb0tcgidb.apps.googleusercontent.com (clientId)
+		//OoSGb0NLRAsmQct2vjWS2Wz8 (secret)
+//		String sheetId = createNewSheet();
+		
+		
+		File newFile = new File();
+		newFile.setName(title);
+//		copiedFile.setShared(true);
+//		copiedFile.setWritersCanShare(true);
+//		copiedFile.setPermissions(permissions);
+		com.google.api.services.drive.Drive.Files.Create createRequest = getDriveService().files().create(newFile);
+		createRequest.setFields("*");
+		File result = createRequest.execute();
+		
+		for(Permission p : permissions) {
+			
+			com.google.api.services.drive.Drive.Permissions.Create create = getDriveService().permissions().create(result.getId(), p);
+			if("owner" == p.getRole()) {
+//				create.setTransferOwnership(true);
+				continue;
+				
+			}else {
+				create.setSendNotificationEmail(false);
+			}
+			create.execute();
+			
+		}
+		File fileInfo = getFileInfo(FILE_INFO_WEB_LINK, result.getId());
+		return fileInfo;
+	}
 	public File getFileInfo(String fieldsToVisualise, String id) throws IOException, GeneralSecurityException {
 		
 		return getDriveService().files().get(id).setFields(fieldsToVisualise).execute();
@@ -125,9 +156,9 @@ public class GoogleWrapper {
 //		return null;
 //	}
 
-	public String createNewSheet() throws IOException, GeneralSecurityException {
+	public Spreadsheet createNewSheet() throws IOException, GeneralSecurityException {
 		Create request = getSheets().spreadsheets().create(new Spreadsheet());
-		return  request.execute().getSpreadsheetId();
+		return  request.execute();
 	}
 	
 	public void createNSheetTabs(String sheetId) {

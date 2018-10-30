@@ -2,61 +2,32 @@ package m2t.jobloader.reports.factory;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.Properties;
 
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
-import com.google.api.services.sheets.v4.model.AddSheetRequest;
-import com.google.api.services.sheets.v4.model.Border;
-import com.google.api.services.sheets.v4.model.Borders;
-import com.google.api.services.sheets.v4.model.CellData;
-import com.google.api.services.sheets.v4.model.CellFormat;
-import com.google.api.services.sheets.v4.model.Color;
 import com.google.api.services.sheets.v4.model.DimensionProperties;
 import com.google.api.services.sheets.v4.model.DimensionRange;
-import com.google.api.services.sheets.v4.model.ExtendedValue;
-import com.google.api.services.sheets.v4.model.GridProperties;
-import com.google.api.services.sheets.v4.model.GridRange;
 import com.google.api.services.sheets.v4.model.InsertDimensionRequest;
-import com.google.api.services.sheets.v4.model.NumberFormat;
-import com.google.api.services.sheets.v4.model.Padding;
-import com.google.api.services.sheets.v4.model.RepeatCellRequest;
 import com.google.api.services.sheets.v4.model.Request;
-import com.google.api.services.sheets.v4.model.SheetProperties;
-import com.google.api.services.sheets.v4.model.TextFormat;
-import com.google.api.services.sheets.v4.model.TextRotation;
 import com.google.api.services.sheets.v4.model.UpdateDimensionPropertiesRequest;
-import com.google.api.services.sheets.v4.model.UpdateSheetPropertiesRequest;
 
-import m2t.jobloader.configuration.Configuration;
 import m2t.service.model.jobloader.JobDTO;
 import m2t.service.model.reports.ClientReportDTO;
 
 @Component()
 @Scope(scopeName = ConfigurableBeanFactory.SCOPE_PROTOTYPE)
-public class ClientReportFactory {
+public class ClientReportFactory extends BasicBatchRequestFactory {
 
-	@Autowired
-	Configuration configuration;
 	int startRow;
 
 	public ClientReportFactory() {
 		super();
 		startRow = 0;
-	}
-
-	public Configuration getConfiguration() {
-		return configuration;
-	}
-
-	public void setConfiguration(Configuration configuration) {
-		this.configuration = configuration;
 	}
 
 	public int getStartRow() {
@@ -71,10 +42,17 @@ public class ClientReportFactory {
 		List<Request> list = new ArrayList<>();
 		for(int index = 0; index < reports.size(); index++) {
 			ClientReportDTO report = reports.get(index);
-			list.addAll(getAddSheetRequests("" + index +" " + report.getClientName(), index));
+			String title = "" + index +" " + report.getClientName();
+			if(index > 0) {
+				
+				list.addAll(getAddSheetRequests(title, index));
+			}else {
+				list.add(renameSheet(index, title));
+			}
 		}
 		return list;
 	}
+
 	public List<Request> getRequestForDealer(ClientReportDTO data, int sheetNumber) {
 		List<Request> list = new ArrayList<>();
 
@@ -102,53 +80,21 @@ public class ClientReportFactory {
 
 	private List<Request> getColumn1DealerSizeRequests(ClientReportDTO data, int sheetNumber) {
 		List<Request> requests = new ArrayList<>();
-		requests.add(getSizeCellRequest(100 + sheetNumber, true, 0, 1, configuration.getClientReportDealerColumn1Width()));
-		requests.add(getSizeCellRequest(100 + sheetNumber, true, 1, 2, configuration.getClientReportDealerColumn2Width()));
-		requests.add(getSizeCellRequest(100 + sheetNumber, true, 2, 3, configuration.getClientReportDealerColumn3Width()));
-		requests.add(getSizeCellRequest(100 + sheetNumber, false, 0, 1, configuration.getClientReportDealerTitleRowHeight()));
-		requests.add(getSizeCellRequest(100 + sheetNumber, false, 2, data.getJobs().size() + 2, configuration.getClientReportDealerJobsRowHeight()));
+		requests.add(getSizeCellRequest( sheetNumber, true, 0, 1, configuration.getClientReportDealerColumn1Width()));
+		requests.add(getSizeCellRequest( sheetNumber, true, 1, 2, configuration.getClientReportDealerColumn2Width()));
+		requests.add(getSizeCellRequest( sheetNumber, true, 2, 3, configuration.getClientReportDealerColumn3Width()));
+		requests.add(getSizeCellRequest( sheetNumber, false, 0, 1, configuration.getClientReportDealerTitleRowHeight()));
+		requests.add(getSizeCellRequest( sheetNumber, false, 2, data.getJobs().size() + 2, configuration.getClientReportDealerJobsRowHeight()));
 		return requests;
 	}
 	private List<Request> getColumn1InstallerSizeRequests(ClientReportDTO data, int sheetNumber) {
 		List<Request> requests = new ArrayList<>();
-		requests.add(getSizeCellRequest(100 + sheetNumber, true, 0, 1, configuration.getClientReportInstallerColumn1Width()));
-		requests.add(getSizeCellRequest(100 + sheetNumber, true, 1, 2, configuration.getClientReportInstallerColumn2Width()));
-		requests.add(getSizeCellRequest(100 + sheetNumber, true, 2, 3, configuration.getClientReportInstallerColumn3Width()));
-		requests.add(getSizeCellRequest(100 + sheetNumber, true, 3, 4, configuration.getClientReportInstallerColumn3Width()));
-		requests.add(getSizeCellRequest(100 + sheetNumber, false, 0, 1, configuration.getClientReportDealerTitleRowHeight()));
-		requests.add(getSizeCellRequest(100 + sheetNumber, false, 2, data.getJobs().size() + 2, configuration.getClientReportDealerJobsRowHeight()));
-		return requests;
-	}
-
-	public Request getSizeCellRequest(int sheetNumber, boolean isDimensionColumn, int startIndex, int endIndex,
-			int pixelSize) {
-		return new Request().setUpdateDimensionProperties(
-					new UpdateDimensionPropertiesRequest().setRange(
-								new DimensionRange().setDimension(isDimensionColumn?"COLUMNS":"ROWS").setSheetId(sheetNumber).setStartIndex(new Integer(startIndex)).setEndIndex(new Integer(endIndex))
-							).setProperties(
-								new DimensionProperties().setPixelSize(new Integer(pixelSize))
-							).setFields("pixelSize")
-				);
-	}
-
-	private List<Request> getAddSheetRequests(String title, int sheetNumber) {
-		List<Request> requests = new ArrayList<>();
-		requests.add(
-				new Request().setAddSheet(
-					new AddSheetRequest().setProperties(
-							new SheetProperties().setTitle(title).setIndex(sheetNumber).setGridProperties(
-								new GridProperties().setRowCount(new Integer(1000)).setColumnCount(new Integer(20))
-							).setSheetId(new Integer(100+sheetNumber))
-					)
-				)
-		);
-//		requests.add(
-//				new Request().setInsertDimension(
-//					new InsertDimensionRequest().setInheritFromBefore(Boolean.TRUE).setRange(
-//							new DimensionRange().setSheetId(new Integer(sheetNumber)).setStartIndex(0).setEndIndex(1000).setDimension("ROWS")
-//							)
-//				)
-//		);
+		requests.add(getSizeCellRequest( sheetNumber, true, 0, 1, configuration.getClientReportInstallerColumn1Width()));
+		requests.add(getSizeCellRequest( sheetNumber, true, 1, 2, configuration.getClientReportInstallerColumn2Width()));
+		requests.add(getSizeCellRequest( sheetNumber, true, 2, 3, configuration.getClientReportInstallerColumn3Width()));
+		requests.add(getSizeCellRequest( sheetNumber, true, 3, 4, configuration.getClientReportInstallerColumn4Width()));
+		requests.add(getSizeCellRequest( sheetNumber, false, 0, 1, configuration.getClientReportDealerTitleRowHeight()));
+		requests.add(getSizeCellRequest( sheetNumber, false, 2, data.getJobs().size() + 2, configuration.getClientReportDealerJobsRowHeight()));
 		return requests;
 	}
 
@@ -188,15 +134,6 @@ public class ClientReportFactory {
 		int jobRows = 0;
 		for (int i = 0; i < data.getJobs().size(); i++) {
 
-			if (i % configuration.getClientReportDealerJobsPerRow().intValue() == 0 && i != 0) {
-				// next printing page
-				requests.addAll(getDealerTitle(data, sheetNumber));
-				requests.add(getRowHeightRequest(sheetNumber, configuration.getClientReportDealerJobsRowHeight(),
-						new Integer(this.startRow), new Integer(this.startRow + 1 + jobRows)));
-				jobRows = 0;
-				this.startRow++;
-
-			}
 
 			JobDTO job = data.getJobs().get(i);
 			this.startRow++;
@@ -228,7 +165,8 @@ public class ClientReportFactory {
 		int columnStart = isInstaller ? 3 : 2;
 		int columnEnd = columnStart + 1;
 		String style = configuration.getClientReportStyleForDealerJobSummary();
-		Request request = createRequest(value, sheetNumber, rowStart, rowEnd, columnStart, columnEnd, style);
+		
+		Request request = getCellValueAndStyleRequest(value, sheetNumber, rowStart, rowEnd, columnStart, columnEnd, style);
 		return request;
 	}
 
@@ -240,18 +178,18 @@ public class ClientReportFactory {
 		int columnStart = isInstaller ? 2 : 1;
 		int columnEnd = columnStart + 1;
 		String style = configuration.getClientReportStyleForDealerJobClient();
-		Request request = createRequest(value, sheetNumber, rowStart, rowEnd, columnStart, columnEnd, style);
+		Request request = getCellValueAndStyleRequest(value, sheetNumber, rowStart, rowEnd, columnStart, columnEnd, style);
 		return request;
 	}
 
 	private Request getJobCode(JobDTO job, int sheetNumber, int startRow) {
-		String value = job.getJobDeliverTo() + " " + job.getTotalBoxes();
+		String value = job.getOriginalClientCode() + " " + job.getTotalBoxes();
 		int rowStart = startRow;
 		int rowEnd = startRow + 1;
 		int columnStart = 1;
 		int columnEnd = 2;
 		String style = configuration.getClientReportStyleForDealerJobCode();
-		Request request = createRequest(value, sheetNumber, rowStart, rowEnd, columnStart, columnEnd, style);
+		Request request = getCellValueAndStyleRequest(value, sheetNumber, rowStart, rowEnd, columnStart, columnEnd, style);
 		return request;
 	}
 
@@ -262,7 +200,7 @@ public class ClientReportFactory {
 		int columnStart = 0;
 		int columnEnd = 1;
 		String style = configuration.getClientReportStyleForDealerJobNumber();
-		Request request = createRequest(value, sheetNumber, rowStart, rowEnd, columnStart, columnEnd, style);
+		Request request = getCellValueAndStyleRequest(value, sheetNumber, rowStart, rowEnd, columnStart, columnEnd, style);
 		return request;
 	}
 
@@ -279,6 +217,7 @@ public class ClientReportFactory {
 		List<Request> requests = new ArrayList<>();
 
 		requests.add(getContainerCell(data.getContainerNumber(), sheetNumber, this.startRow));
+		requests.add(getMergeRequest( sheetNumber, this.startRow, this.startRow, 1,3, "MERGE_COLUMNS"));
 		requests.add(getClientCodeCellInstaller(data, sheetNumber, this.startRow));
 		requests.add(getInstallerTotalSummaryCell(data, sheetNumber, this.startRow));
 		requests.add(getRowHeightRequestForTitle(sheetNumber, this.startRow));
@@ -295,7 +234,7 @@ public class ClientReportFactory {
 
 	private Request getRowHeightRequest(int sheetNumber, Integer rowHeight, Integer startIndex, Integer endIndex) {
 		return new Request().setUpdateDimensionProperties(new UpdateDimensionPropertiesRequest()
-				.setRange(new DimensionRange().setSheetId(100 + sheetNumber).setDimension("ROWS").setStartIndex(startIndex)
+				.setRange(new DimensionRange().setSheetId( sheetNumber).setDimension("ROWS").setStartIndex(startIndex)
 						.setEndIndex(endIndex))
 				.setFields("pixelSize").setProperties(new DimensionProperties().setPixelSize(rowHeight)));
 	}
@@ -306,7 +245,7 @@ public class ClientReportFactory {
 		int columnStart = 3;
 		int columnEnd = 4;
 		String style = configuration.getClientReportStyleForDealerTotalSummary();
-		Request request = createRequest(value, sheetNumber, rowStart, rowEnd, columnStart, columnEnd, style);
+		Request request = getCellValueAndStyleRequest(value, sheetNumber, rowStart, rowEnd, columnStart, columnEnd, style);
 		return request;
 	}
 
@@ -317,7 +256,7 @@ public class ClientReportFactory {
 		int columnStart = 2;
 		int columnEnd = 3;
 		String style = configuration.getClientReportStyleForDealerTotalSummary();
-		Request request = createRequest(value, sheetNumber, rowStart, rowEnd, columnStart, columnEnd, style);
+		Request request = getCellValueAndStyleRequest(value, sheetNumber, rowStart, rowEnd, columnStart, columnEnd, style);
 		return request;
 	}
 
@@ -371,17 +310,17 @@ public class ClientReportFactory {
 		int columnStart = 1;
 		int columnEnd = 2;
 		String style = configuration.getClientReportStyleForDealerClientCode();
-		Request request = createRequest(value, sheetNumber, rowStart, rowEnd, columnStart, columnEnd, style);
+		Request request = getCellValueAndStyleRequest(value, sheetNumber, rowStart, rowEnd, columnStart, columnEnd, style);
 		return request;
 	}
 	private Request getClientCodeCellInstaller(ClientReportDTO data, int sheetNumber, int startRow) {
 		String value = data.getClientName() + " " + data.getTotalBoxes();
 		int rowStart = startRow;
 		int rowEnd = startRow + 1;
-		int columnStart = 2;
-		int columnEnd = 3;
+		int columnStart = 1;
+		int columnEnd = 2;
 		String style = configuration.getClientReportInstallerStyleClientCode();
-		Request request = createRequest(value, sheetNumber, rowStart, rowEnd, columnStart, columnEnd, style);
+		Request request = getCellValueAndStyleRequest(value, sheetNumber, rowStart, rowEnd, columnStart, columnEnd, style);
 		return request;
 	}
 
@@ -392,116 +331,8 @@ public class ClientReportFactory {
 		int columnStart = 0;
 		int columnEnd = 1;
 		String style = configuration.getClientReportStyleForContainer();
-		Request request = createRequest(value, sheetNumber, rowStart, rowEnd, columnStart, columnEnd, style);
+		Request request = getCellValueAndStyleRequest(value, sheetNumber, rowStart, rowEnd, columnStart, columnEnd, style);
 		return request;
-	}
-
-	private Request createRequest(String cellValue, int sheetNumber, int startRow, int endRow, int startColumn,
-			int endColumn, String style) {
-
-		return new Request().setRepeatCell(new RepeatCellRequest()
-				.setCell(new CellData().setUserEnteredValue(new ExtendedValue().setStringValue(cellValue))
-						.setUserEnteredFormat(getCellFormat(style)))
-				.setRange(new GridRange().setSheetId(100 + sheetNumber).setStartRowIndex(startRow).setEndRowIndex(endRow)
-						.setStartColumnIndex(startColumn).setEndColumnIndex(endColumn))
-				.setFields("*"));
-	}
-
-	private CellFormat getCellFormat(String style) {
-		CellFormat cellFormat = new CellFormat();
-		cellFormat.setTextFormat(new TextFormat());
-		cellFormat.setTextRotation(new TextRotation());
-
-		Map<String, String> styleAttributes = parseStyle(style);
-		styleAttributes.keySet().stream().forEach(attribute -> {
-			String value = styleAttributes.get(attribute);
-			if ("font-size".equals(attribute)) {
-				cellFormat.getTextFormat().setFontSize(new Integer(value));
-			} else if ("font-family".equals(attribute)) {
-				cellFormat.getTextFormat().setFontFamily(value);
-			} else if ("bold".equals(attribute)) {
-				cellFormat.getTextFormat().setBold(new Boolean(value));
-			} else if ("horizontal-alignment".equals(attribute)) {
-				cellFormat.setHorizontalAlignment(value);
-			} else if ("vertical-alignment".equals(attribute)) {
-				cellFormat.setVerticalAlignment(value);
-			} else if ("text-direction".equals(attribute)) {
-				cellFormat.setTextDirection(value);
-			} else if ("text-direction-angle".equals(attribute)) {
-				cellFormat.getTextRotation().setAngle(new Integer(value));
-			} else if ("text-direction-vertical".equals(attribute)) {
-				cellFormat.getTextRotation().setVertical(new Boolean(value));
-			} else if ("wrap-strategy".equals(attribute)) {
-				cellFormat.setWrapStrategy(value);
-			} else if ("backgroud-color".startsWith(StringUtils.substringBeforeLast(attribute, "."))) {
-				if (cellFormat.getBackgroundColor() == null) {
-					cellFormat.setBackgroundColor(new Color());
-				}
-				cellFormat.getBackgroundColor().set(StringUtils.substringAfterLast(attribute, "."), value);
-
-			} else if ("borders".startsWith(StringUtils.substringBeforeLast(attribute, "."))) {
-				if (cellFormat.getBorders() == null) {
-					cellFormat.setBorders(new Borders());
-				}
-				if ("borders-bottom".startsWith(StringUtils.substringBeforeLast(attribute, "."))) {
-					if (cellFormat.getBorders().getBottom() == null) {
-						cellFormat.getBorders().setBottom(new Border());
-					}
-					cellFormat.getBorders().getBottom().set(StringUtils.substringAfterLast(attribute, "."), value);
-				} else if ("borders-top".startsWith(StringUtils.substringBeforeLast(attribute, "."))) {
-					if (cellFormat.getBorders().getTop() == null) {
-						cellFormat.getBorders().setTop(new Border());
-					}
-					cellFormat.getBorders().getTop().set(StringUtils.substringAfterLast(attribute, "."), value);
-
-				} else if ("borders-bottom".startsWith(StringUtils.substringBeforeLast(attribute, "."))) {
-					if (cellFormat.getBorders().getLeft() == null) {
-						cellFormat.getBorders().setLeft(new Border());
-					}
-					cellFormat.getBorders().getLeft().set(StringUtils.substringAfterLast(attribute, "."), value);
-				} else if ("borders-bottom".startsWith(StringUtils.substringBeforeLast(attribute, "."))) {
-					if (cellFormat.getBorders().getRight() == null) {
-						cellFormat.getBorders().setRight(new Border());
-					}
-					cellFormat.getBorders().getRight().set(StringUtils.substringAfterLast(attribute, "."), value);
-				}
-
-			} else if ("number-format".startsWith(StringUtils.substringBeforeLast(attribute, "."))) {
-				if (cellFormat.getNumberFormat() == null) {
-					cellFormat.setNumberFormat(new NumberFormat());
-				}
-				cellFormat.getNumberFormat().set(StringUtils.substringAfterLast(attribute, "."), value);
-
-			} else if ("padding".startsWith(StringUtils.substringBeforeLast(attribute, "."))) {
-				if (cellFormat.getPadding() == null) {
-					cellFormat.setPadding(new Padding());
-				}
-				if ("padding-bottom".equals(attribute)) {
-					cellFormat.getPadding().setBottom(new Integer(value));
-				} else if ("padding-top".equals(attribute)) {
-					cellFormat.getPadding().setTop(new Integer(value));
-				} else if ("padding-bottom".equals(attribute)) {
-					cellFormat.getPadding().setLeft(new Integer(value));
-				} else if ("padding-bottom".equals(attribute)) {
-					cellFormat.getPadding().setRight(new Integer(value));
-				}
-
-			}
-
-		});
-		return cellFormat;
-	}
-
-	private Map<String, String> parseStyle(String style) {
-		Map<String, String> map = new HashMap<>();
-		String[] couples = style.split(";");
-		for (String keyValue : couples) {
-			String[] values = keyValue.split(":");
-			if (values.length == 2) {
-				map.put(values[0], values[1]);
-			}
-		}
-		return map;
 	}
 
 	List<Request> getRequestForInstaller(ClientReportDTO data) {

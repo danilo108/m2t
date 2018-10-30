@@ -38,6 +38,29 @@ public class Container {
 	private String fullURL;
 
 	
+	@Column(name="report_sheetId")
+	private String reportSheetId;
+	
+	@Column(name="report_fullURL")
+	private String reportFullURL;
+
+	
+	public String getReportSheetId() {
+		return reportSheetId;
+	}
+
+	public void setReportSheetId(String reportSheetId) {
+		this.reportSheetId = reportSheetId;
+	}
+
+	public String getReportFullURL() {
+		return reportFullURL;
+	}
+
+	public void setReportFullURL(String reportFullURL) {
+		this.reportFullURL = reportFullURL;
+	}
+
 	public String getFullURL() {
 		return fullURL;
 	}

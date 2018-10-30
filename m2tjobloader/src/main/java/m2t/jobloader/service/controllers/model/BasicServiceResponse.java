@@ -3,6 +3,9 @@ package m2t.jobloader.service.controllers.model;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 public class BasicServiceResponse {
 
 	private int found;
@@ -45,6 +48,17 @@ public class BasicServiceResponse {
 
 	public void setErrorDescription(String errorDescription) {
 		this.errorDescription = errorDescription;
+	}
+	
+	@Override
+	public String toString() {
+		try {
+			ObjectMapper om = new ObjectMapper();
+			return om.writerWithDefaultPrettyPrinter().writeValueAsString(this);
+		} catch (JsonProcessingException e) {
+			return super.toString();
+		}
+		
 	}
 
 }

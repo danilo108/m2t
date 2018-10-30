@@ -67,7 +67,7 @@ public class TestController {
 			Container container = containerRepository.findByContainerNumber(containerNumber);
 			
 			String sheetId = report.getSheetId();
-			sheetController.getWrapper().getDriveService().files().export(sheetId,"application/pdf").set("portrait", Boolean.TRUE).set("scale","4").executeAndDownloadTo(os);
+			sheetController.getWrapper().getDriveService().files().export(sheetId,"application/pdf").set("portrait", Boolean.TRUE).set("scale","4").set("printtitle", "true").executeAndDownloadTo(os);
 			os.flush();
 			os.close();
 			} catch (IOException | GeneralSecurityException e) {
