@@ -167,7 +167,7 @@ public class GoogleWrapper {
 
 	
 
-	ValueRange getValueRange(String sheetId, String range) throws IOException, GeneralSecurityException {
+	public ValueRange getValueRange(String sheetId, String range) throws IOException, GeneralSecurityException {
 		 Get request = getSheets().spreadsheets().values().get(sheetId, range);
 		 request.setValueRenderOption("FORMATTED_VALUE");
 		return request.execute();

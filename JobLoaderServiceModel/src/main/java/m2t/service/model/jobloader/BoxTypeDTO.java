@@ -1,7 +1,7 @@
 package m2t.service.model.jobloader;
 
 public enum BoxTypeDTO {
-	PANEL("Panel"), FRAME("frame"), HARDWARE("hardware");
+	PANEL("Panel"), FRAME("frame"), HARDWARE("hardware"), BLIND("Blind"), CHANNEL("t&b u channel"), LOUVER("louver");
 	private String codeOnDocket;
 	
 	private BoxTypeDTO(String codeOnDocket) {

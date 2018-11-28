@@ -17,13 +17,27 @@ public class ClientReportDTO {
 	int totalPanels;
 	int totalHardware;
 	int totalFrames;
+	float totalSize;
+	String formattedSize;
+	
 	List<JobDTO> jobs;
 	
 	public ClientReportDTO() {
 		jobs = new ArrayList<JobDTO>();
+		totalSize = 0f;
 	}
 	
 	
+	public float getTotalSize() {
+		return totalSize;
+	}
+
+
+	public void setTotalSize(float totalSize) {
+		this.totalSize = totalSize;
+	}
+
+
 	public String getContainerNumber() {
 		return containerNumber;
 	}
@@ -102,5 +116,16 @@ public class ClientReportDTO {
 		this.totalBoxes += hardware;
 		this.totalHardware += hardware;
 	}
+
+
+	public String getFormattedSize() {
+		return formattedSize;
+	}
+
+
+	public void setFormattedSize(String formattedSize) {
+		this.formattedSize = formattedSize;
+	}
+	
 	
 }

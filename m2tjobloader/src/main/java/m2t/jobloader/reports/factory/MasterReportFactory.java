@@ -14,11 +14,13 @@ import com.google.api.services.drive.model.File;
 import com.google.api.services.drive.model.Permission;
 import com.google.api.services.sheets.v4.model.Spreadsheet;
 
+import m2t.jobloader.dao.model.Job;
+import m2t.jobloader.dao.model.translators.JobTranslator;
 import m2t.jobloader.service.controllers.model.ResponseErrorDetail;
 import m2t.service.model.jobloader.JobDTO;
 
 @Component
-public class MasterReportFactory extends AbstractFilteredListReport<JobDTO> {
+public class MasterReportFactory extends AbstractFilteredListReport<Job,JobDTO> {
 
 	@Autowired
 	private MasterReportFactoryConfiguration reportConfiguration;
@@ -161,6 +163,11 @@ public class MasterReportFactory extends AbstractFilteredListReport<JobDTO> {
 		p.setRole(role);
 		p.setEmailAddress(email);
 		return p;
+	}
+
+	@Override
+	protected Class getTranslatorClass() {
+		return JobTranslator.class;
 	}
 
 }

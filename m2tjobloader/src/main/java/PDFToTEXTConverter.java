@@ -3,6 +3,7 @@ import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.StringReader;
+import java.io.StringWriter;
 import java.nio.file.Files;
 
 import javax.swing.plaf.synth.SynthSeparatorUI;
@@ -15,6 +16,7 @@ import com.itextpdf.text.pdf.PRTokeniser;
 import com.itextpdf.text.pdf.PdfDictionary;
 import com.itextpdf.text.pdf.PdfName;
 import com.itextpdf.text.pdf.PdfReader;
+import com.itextpdf.text.pdf.codec.Base64.InputStream;
 import com.itextpdf.text.pdf.parser.PdfTextExtractor;
 
 import ch.qos.logback.core.net.SyslogOutputStream;
@@ -37,5 +39,19 @@ public class PDFToTEXTConverter {
           bw.flush();
           bw.close();
           
+      }
+      
+      public String convertToText(InputStream is) throws IOException {
+          PdfReader reader = new PdfReader(is);
+          StringBuffer sb = new StringBuffer();
+          sb.append("__cc__ps1__\n");
+
+          for (int page = 1; page <= reader.getNumberOfPages(); page++) {
+        	
+        	  sb.append(PdfTextExtractor.getTextFromPage(reader, page));
+            
+          }
+          
+          return sb.toString();
       }
     }

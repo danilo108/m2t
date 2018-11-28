@@ -173,6 +173,22 @@ public class ClientReportFactory extends BasicBatchRequestFactory {
 	private Request getJobClientCell(JobDTO job, int sheetNumber, int startRow, boolean isInstaller) {
 		String value = job.getJobClient().replaceAll(configuration.getClientReportJobClientRegExSearch(),
 				configuration.getClientReportJobClientRegExReplaceWith());
+		value = value.replaceAll("-", " ");
+		value = value.replaceAll("/", " ");
+		value = value.replaceAll(" SO ", " ");
+		value = value.replaceAll(" PO ", " ");
+		value = value.replaceAll(" NSW ", " ");
+		
+		if(value.endsWith(" PO")) {
+			value = StringUtils.substringBeforeLast(value, " PO");
+		}
+		if(value.endsWith(" SO")) {
+			value = StringUtils.substringBeforeLast(value, " SO");
+		}
+		value = value.replaceAll("   ", " ");
+		value = value.replaceAll("  ", " ").replace("  ", " ");
+		value = value.replaceAll("  ", " ");
+		
 		int rowStart = startRow;
 		int rowEnd = startRow + 1;
 		int columnStart = isInstaller ? 2 : 1;
@@ -239,7 +255,7 @@ public class ClientReportFactory extends BasicBatchRequestFactory {
 				.setFields("pixelSize").setProperties(new DimensionProperties().setPixelSize(rowHeight)));
 	}
 	private Request getInstallerTotalSummaryCell(ClientReportDTO data, int sheetNumber, int startRow) {
-		String value = formatSummary(data.getTotalPanels(), "", data.getTotalFrames(), data.getTotalHardware());
+		String value = formatSummary(data.getTotalPanels(), data.getFormattedSize(), data.getTotalFrames(), data.getTotalHardware());
 		int rowStart = startRow;
 		int rowEnd = startRow + 1;
 		int columnStart = 3;
@@ -250,7 +266,7 @@ public class ClientReportFactory extends BasicBatchRequestFactory {
 	}
 
 	private Request getDealerTotalSummaryCell(ClientReportDTO data, int sheetNumber, int startRow) {
-		String value = formatSummary(data.getTotalPanels(), "", data.getTotalFrames(), data.getTotalHardware());
+		String value = formatSummary(data.getTotalPanels(), data.getFormattedSize(), data.getTotalFrames(), data.getTotalHardware());
 		int rowStart = startRow;
 		int rowEnd = startRow + 1;
 		int columnStart = 2;

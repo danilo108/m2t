@@ -12,11 +12,12 @@ public class CreateReportResponse extends BasicServiceResponse {
 	private String sheetFullURL;
 	List<String> clientNames;
 	List<ClientReportDTO> clientReports;
+
 	
 	
 
 	public CreateReportResponse() {
-		super();
+		super("create report");
 		clientReports = new ArrayList<>();
 		clientNames = new ArrayList<>();
 	}

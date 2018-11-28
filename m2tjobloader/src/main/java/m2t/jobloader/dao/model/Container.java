@@ -15,6 +15,10 @@ import javax.persistence.OneToMany;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+/**
+ * @author Shreya
+ *
+ */
 @Entity
 public class Container {
 	
@@ -44,6 +48,8 @@ public class Container {
 	@Column(name="report_fullURL")
 	private String reportFullURL;
 
+	@Column(name="originalFileName")
+	private String originalFileName;
 	
 	public String getReportSheetId() {
 		return reportSheetId;
@@ -51,6 +57,15 @@ public class Container {
 
 	public void setReportSheetId(String reportSheetId) {
 		this.reportSheetId = reportSheetId;
+	}
+
+	
+	public String getOriginalFileName() {
+		return originalFileName;
+	}
+
+	public void setOriginalFileName(String originalFileName) {
+		this.originalFileName = originalFileName;
 	}
 
 	public String getReportFullURL() {

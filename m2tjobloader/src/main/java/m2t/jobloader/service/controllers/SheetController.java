@@ -260,7 +260,7 @@ public class SheetController {
 		boolean success = true;
 		String range = configuration.getGoogleSheetTemplateJobSheetUpdatesRange();
 		AppendValuesResponse result = wrapper.updateRange(sheetId, range, values);
-		if (result.getUpdates().getUpdatedRows() != values.size()) {
+		if (result.getUpdates().getUpdatedRows() != null && result.getUpdates().getUpdatedRows() != values.size()) {
 			ObjectMapper mapper = new ObjectMapper();
 			String jsonSRequest = mapper.writeValueAsString(jobs);
 			response.setError(true);

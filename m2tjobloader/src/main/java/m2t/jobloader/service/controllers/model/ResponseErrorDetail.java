@@ -5,7 +5,7 @@ import java.util.List;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-public class ResponseErrorDetail {
+public class ResponseErrorDetail{
 	
 	private String erroCode;
 	private String errorDescription;
@@ -91,6 +91,15 @@ public class ResponseErrorDetail {
 		this.details = details;
 	}
 	
+	
+	public Exception getException() {
+		return exception;
+	}
+
+	public void setException(Exception exception) {
+		this.exception = exception;
+	}
+
 	@Override
 	public String toString() {
 		try {

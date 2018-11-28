@@ -4,9 +4,7 @@ import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.StringBufferInputStream;
 import java.io.StringWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -17,8 +15,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-
-import javax.websocket.server.PathParam;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -46,7 +42,6 @@ import m2t.jobloader.dao.repositories.JobRepository;
 import m2t.jobloader.service.controllers.model.CreateReportResponse;
 import m2t.jobloader.service.controllers.model.JobTranslator;
 import m2t.jobloader.service.controllers.model.ResponseErrorDetail;
-import m2t.jobloader.service.controllers.model.UpdateJobsResponse;
 import m2t.service.model.jobloader.BoxDTO;
 import m2t.service.model.jobloader.BoxTypeDTO;
 import m2t.service.model.jobloader.ContainerDTO;
@@ -72,7 +67,6 @@ public class JobLoaderService {
 	@Autowired
 	Configuration configuration;
 
-
 	@RequestMapping(path = "/jobloader/create", method = RequestMethod.POST)
 	public CreateOrReplaceContainerResponseDTO createOrReplaceContainer(
 			@RequestBody(required = true) ContainerDTO containerDTO) {
@@ -82,7 +76,7 @@ public class JobLoaderService {
 		Map<String, Client> clients = new HashMap<>();
 		List<Job> jobs = new ArrayList<>();
 		String containerNumber = containerDTO.getContainerNumber();
-		response.setCointainerNumber(containerNumber	);
+		response.setCointainerNumber(containerNumber);
 		ContainerDTO containerDeleted = deletContainerIfExists(containerNumber);
 		response.setDeletedContainer(containerDeleted);
 		containerDTO.getDockets().stream().forEach(docket -> {
@@ -95,28 +89,32 @@ public class JobLoaderService {
 		Container container = new Container();
 		container.setJobs(jobs);
 		container.setContainerNumber(containerNumber);
+		container.setOriginalFileName(containerDTO.getOriginalFileName());
 		containerRepository.save(container);
 
 		return response;
 	}
-	
-	@RequestMapping(path="/reports/{containerNumber}/data")
-	public @ResponseBody CreateReportResponse extractContainerReportData(@PathVariable("containerNumber")String containerNumber) {
+
+	@RequestMapping(path = "/reports/{containerNumber}/data")
+	public @ResponseBody CreateReportResponse extractContainerReportData(
+			@PathVariable("containerNumber") String containerNumber) {
 		CreateReportResponse response = new CreateReportResponse();
 		response.setContainerNumber(containerNumber);
 		Container container = containerRepository.findByContainerNumber(containerNumber);
-		if(container == null) {
+		if (container == null) {
 			response.setFound(0);
 			response.setError(true);
-			response.getWarnings().add(new ResponseErrorDetail("WARNING", "Could not find the container " + containerNumber, ""));
+			response.getWarnings()
+					.add(new ResponseErrorDetail("WARNING", "Could not find the container " + containerNumber, ""));
 			return response;
 		}
 		response.setFound(1);
 		Map<String, ClientReportDTO> clients = new HashMap<>();
 		container.getJobs().stream().forEach(job -> {
-			
-			ClientReportDTO client = clients.get(job.getDeliverToCode() == null?job.getOriginalClient().getClientCode():job.getDeliverToCode());
-			if(client == null) {
+
+			ClientReportDTO client = clients.get(
+					job.getDeliverToCode() == null ? job.getOriginalClient().getClientCode() : job.getDeliverToCode());
+			if (client == null) {
 				client = new ClientReportDTO();
 				client.setClientName(job.getDeliverToCode());
 				client.setContainerNumber(containerNumber);
@@ -124,32 +122,35 @@ public class JobLoaderService {
 				clients.put(job.getDeliverToCode(), client);
 			}
 			JobTranslator translator = new JobTranslator();
-			
+
 			client.getJobs().add(translator.translateToDTO(job));
+			client.setTotalSize(client.getTotalSize() + job.getSizeSQM());
 			client.addFrames(job.getTotalFrames());
 			client.addHardware(job.getTotalHardware());
 			client.addPanels(job.getTotalPanels());
-			
-			
+
 		});
-		List<ClientReportDTO> sorted = clients.values().stream()
-        .sorted((c1,c2)->{
-        	return new Integer(c2.getTotalBoxes()).compareTo(new Integer(c1.getTotalBoxes()));
-        }).collect(Collectors.toList());
+		List<ClientReportDTO> sorted = clients.values().stream().sorted((c1, c2) -> {
+			return new Integer(c2.getTotalBoxes()).compareTo(new Integer(c1.getTotalBoxes()));
+		}).collect(Collectors.toList());
+		sorted.stream().forEach(clientReport -> {
+			clientReport.setFormattedSize(m2t.jobloader.dao.model.translators.JobTranslator
+					.formatSize(clientReport.getTotalSize() > 0 && clientReport.getTotalPanels() > 0
+							? clientReport.getTotalSize() / clientReport.getTotalPanels()
+							: 0));
+		});
 		response.setClientReports(sorted);
+
 		response.getClientNames().addAll(clients.keySet());
-	//sorted.stream().filter((r)->{return r.getJobs().size() > 0;});
 		return response;
 	}
-	
-	
 
 	private boolean isInstaller(String deliverToCode) {
-		
+
 		return clientRepository.findByClientCodeAndClientType(deliverToCode, ClientType.DEALER) == null;
 	}
 
-	//@RequestMapping(path = "/test")
+	// @RequestMapping(path = "/test")
 	public Map<String, Object> test() throws GeneralSecurityException, IOException {
 		Map results = new HashMap<>();
 		Path directory = Paths.get(configuration.getTestDocketsFolder());
@@ -157,7 +158,8 @@ public class JobLoaderService {
 			if (!file.toFile().isDirectory() && file.toFile().getName().endsWith("pdf")) {
 				String txt = readTxtFromPDF(file);
 				try {
-					Files.write((new File(file.toFile().getAbsolutePath().replaceAll("pdf", "txt")).toPath()), txt.getBytes());
+					Files.write((new File(file.toFile().getAbsolutePath().replaceAll("pdf", "txt")).toPath()),
+							txt.getBytes());
 				} catch (IOException e1) {
 					// TODO Auto-generated catch block
 					e1.printStackTrace();
@@ -169,8 +171,8 @@ public class JobLoaderService {
 				try {
 					containerDTO = parser.parseContainer();
 					CreateOrReplaceContainerResponseDTO result = createOrReplaceContainer(containerDTO);
-					int count = jobRepository.findByContainerOrderByTotalBoxesDesc(result.getCointainerNumber()).stream()
-							.mapToInt(job -> job.getTotalBoxes()).sum();
+					int count = jobRepository.findByContainerOrderByTotalBoxesDesc(result.getCointainerNumber())
+							.stream().mapToInt(job -> job.getTotalBoxes()).sum();
 					results.put(result.getCointainerNumber(), "" + count);
 				} catch (DocketParserException e) {
 
@@ -180,8 +182,6 @@ public class JobLoaderService {
 			}
 
 		});
-		
-		
 
 		return results;
 	}
@@ -292,7 +292,7 @@ public class JobLoaderService {
 
 			job.setJobCode(jobDTO.getJobNumber());
 			job.setJobClient(jobDTO.getJobClient());
-
+			job.setSizeSQM(jobDTO.getSize());
 			job.setContainer(containerNumber);
 			job = jobRepository.save(job);
 			jobs.add(job);
@@ -327,6 +327,8 @@ public class JobLoaderService {
 				job.setTotalPanels(job.getTotalPanels() + 1);
 			} else if (BoxTypeDTO.HARDWARE.equals(box.getBoxType())) {
 				job.setTotalHardware(job.getTotalHardware() + 1);
+			} else if (BoxTypeDTO.BLIND.equals(box.getBoxType())) {
+				job.setTotalBlinds(job.getTotalBlinds() + 1);
 			} else {
 				job.setTotalFrames(job.getTotalFrames() + 1);
 			}

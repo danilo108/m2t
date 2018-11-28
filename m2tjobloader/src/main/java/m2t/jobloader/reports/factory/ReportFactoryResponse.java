@@ -11,28 +11,15 @@ public class ReportFactoryResponse extends BasicServiceResponse {
 	private String sheetId;
 	private String fullURL;
 	private Integer sheetNumber;
-	private String operationName;
+	
 	
 	public ReportFactoryResponse(String operationName) {
-		super();
+		super(operationName);
 		operations = new HashMap<>();
-		this.operationName = operationName;
-	
-	}
-	
-	public ReportFactoryResponse addOperationResponse( ReportFactoryResponse response) {
-		this.warnings.addAll(response.getWarnings());
-		return this.operations.put(response.getOperationName(), response);
 		
+	
 	}
-
-	public String getOperationName() {
-		return operationName;
-	}
-
-	public void setOperationName(String operationName) {
-		this.operationName = operationName;
-	}
+	
 
 	public Integer getSheetNumber() {
 		return sheetNumber;
@@ -55,13 +42,7 @@ public class ReportFactoryResponse extends BasicServiceResponse {
 		this.fullURL = fullURL;
 	}
 	
-	
-	public Map<String, ReportFactoryResponse> getOperations() {
-		return operations;
-	}
-	public void setOperations(Map<String, ReportFactoryResponse> operations) {
-		this.operations = operations;
-	}
+
 	
 	
 

@@ -7,6 +7,7 @@ public class ContainerDTO {
 	
 	String containerNumber;
 	List<DocketDTO> dockets;
+	String originalFileName;
 	
 	
 	public ContainerDTO() {
@@ -23,6 +24,12 @@ public class ContainerDTO {
 	}
 	public void setDockets(List<DocketDTO> dockets) {
 		this.dockets = dockets;
+	}
+	public String getOriginalFileName() {
+		return originalFileName;
+	}
+	public void setOriginalFileName(String originalFileName) {
+		this.originalFileName = originalFileName;
 	}
 
 	

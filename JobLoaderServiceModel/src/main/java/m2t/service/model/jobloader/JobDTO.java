@@ -12,12 +12,16 @@ public class JobDTO {
 	String jobDeliveryAddress;
 	String jobOriginalDeliveryAddress;
 	String container;
+	boolean doubleRow;
+	String originalClientRow;
 	
 	float size;
 	int totalBoxes;
 	int totalPanels;
 	int totalFrames;
 	int totalHardware;
+	int totalBlinds;
+	
 	String formattedSize;
 	
 
@@ -160,5 +164,36 @@ public class JobDTO {
 		this.size = size;
 	}
 
+
+	public int getTotalBlinds() {
+		return totalBlinds;
+	}
+
+
+	public void setTotalBlinds(int totalBlinds) {
+		this.totalBlinds = totalBlinds;
+	}
+
+
+	public boolean isDoubleRow() {
+		return doubleRow;
+	}
+
+
+	public void setDoubleRow(boolean doubleRow) {
+		this.doubleRow = doubleRow;
+	}
+
+
+	public String getOriginalClientRow() {
+		return originalClientRow;
+	}
+
+
+	public void setOriginalClientRow(String originalClientRow) {
+		this.originalClientRow = originalClientRow;
+	}
+
+	
 	
 }

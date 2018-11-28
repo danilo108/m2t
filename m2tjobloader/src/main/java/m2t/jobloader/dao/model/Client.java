@@ -41,7 +41,9 @@ public class Client {
 	@Column(name="LOCK")
 	String lock;
 	
-
+	@Column(name="NAME")
+	String name;
+	
 
 	public Long getId() {
 		return id;
@@ -49,6 +51,15 @@ public class Client {
 
 	public void setId(Long id) {
 		this.id = id;
+	}
+
+	
+	public String getName() {
+		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
 	}
 
 	public String getClientCode() {

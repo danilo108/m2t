@@ -51,6 +51,8 @@ public class Job {
 	private int totalFrames;
 	@Column(name="NOTES")
 	private String notes;
+	@Column(name="TOT_BLINDS")
+	private Integer totalBlinds;
 	
 	@Column(name="CONTAINER")
 	private String container;
@@ -58,10 +60,15 @@ public class Job {
 	@Column(name="SIZE")
 	private String size;
 	
+	@Column(name="SIZE_SQM")
+	private float sizeSQM;
+	
 	@Column(name="ARRIVED_ON")
 	private Date arrived;
 	
-	
+	public Job() {
+		totalBlinds = new Integer(0);
+	}
 	
 
 	public Long getId() {
@@ -73,6 +80,14 @@ public class Job {
 	}
 	
 	
+
+	public Integer getTotalBlinds() {
+		return totalBlinds;
+	}
+
+	public void setTotalBlinds(Integer totalBlinds) {
+		this.totalBlinds = totalBlinds;
+	}
 
 	public String getDeliverToCode() {
 		return deliverToCode;
@@ -188,6 +203,16 @@ public class Job {
 	
 	
 	
+	public float getSizeSQM() {
+		return sizeSQM;
+	}
+
+
+	public void setSizeSQM(float sizeSQM) {
+		this.sizeSQM = sizeSQM;
+	}
+
+
 	public String getOriginalDeliveryAddress() {
 		return originalDeliveryAddress;
 	}

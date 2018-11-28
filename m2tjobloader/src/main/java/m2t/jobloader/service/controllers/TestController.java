@@ -14,9 +14,14 @@ import org.springframework.web.bind.annotation.RestController;
 
 import m2t.jobloader.dao.model.Container;
 import m2t.jobloader.dao.repositories.ContainerRepository;
+import m2t.jobloader.notification.sns.DefaultNotification;
+import m2t.jobloader.notification.sns.M2TNotification;
+import m2t.jobloader.notification.sns.NotificationFactory;
 import m2t.jobloader.service.controllers.model.BasicServiceResponse;
 import m2t.jobloader.service.controllers.model.CreateReportResponse;
 import m2t.jobloader.service.controllers.model.SheetServiceResponse;
+import m2t.jobloader.websitechecker.WebsiteChecker;
+import m2t.jobloader.websitechecker.model.WebContainerPage;
 
 @RestController
 public class TestController {
@@ -28,6 +33,10 @@ public class TestController {
 	SheetController sheetController;
 	@Autowired
 	ContainerRepository containerRepository;
+	@Autowired
+	WebsiteChecker webSiteChecker;
+	@Autowired
+	NotificationFactory notifiactionFactory;
 	
 	
 	@RequestMapping(path = "/test/{containerNumber}")
@@ -78,4 +87,20 @@ public class TestController {
 		
 		
 	}
+	
+	@RequestMapping(path = "/test/checkWeb")
+	public @ResponseBody WebContainerPage check() throws Exception {
+		webSiteChecker.login();
+		return webSiteChecker.getContainersPage();
+	}
+	
+	
+	@RequestMapping(path="/test/sns")
+	public @ResponseBody DefaultNotification snsTest() {
+		M2TNotification mess = notifiactionFactory.createSheetCreatedForDeliveryManager("5108", "http://spreadsheet.com", "http://myreport.com");
+		mess.send();
+		return (DefaultNotification) mess;
+		
+	}
+	
 }

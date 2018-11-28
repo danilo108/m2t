@@ -11,35 +11,43 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.DependsOn;
 import org.springframework.stereotype.Component;
 
 import com.google.api.services.sheets.v4.model.BatchUpdateSpreadsheetResponse;
 import com.google.api.services.sheets.v4.model.Request;
 
+import m2t.jobloader.dao.model.translators.DTODAOTranslator;
 import m2t.jobloader.service.controllers.GoogleWrapper;
 import m2t.jobloader.service.controllers.model.ResponseErrorDetail;
+import m2t.jobloader.service.controllers.model.ReverseReportUpdateResponse;
 
 @Component
-public abstract class AbstractFilteredListReport<T> extends BasicBatchRequestFactory implements FilteredListReportFactory<T> {
+
+public abstract class AbstractFilteredListReport<DAO, DTO> extends BasicBatchRequestFactory implements FilteredListReportFactory<DTO>{
 	private static final String STYLE_COLUMN_WIDTH = "columnWidth";
-	protected List<T> originalList;
-	protected List<T> filteredList;
+	protected List<DTO> originalList;
+	protected List<DTO> filteredList;
 	@Autowired
 	GoogleWrapper googleWrapper;
+	@Autowired
+	ApplicationContext applicationContext;
+	
 	private String sheetId;
 	private int sheetNumber;
 	private String sheetURL;
 	private Map<String, String> titlePropertyMap;
+	private DTODAOTranslator<DTO, DAO> translator;
 	
 	public AbstractFilteredListReport() {
-		titlePropertyMap = initialiseTitlePropertyMap();
+		
+		
 	}
 	
-	
-
 
 	@Override
-	public ReportFactoryResponse buildReport(List<T> list, Predicate<? super T> predicate, Comparator<? super T> sortComparator) {
+	public ReportFactoryResponse buildReport(List<DTO> list, Predicate<? super DTO> predicate, Comparator<? super DTO> sortComparator) {
 		this.originalList = list.stream().collect(Collectors.toList());
 		this.filteredList = list.stream().filter(predicate).
 				sorted(sortComparator).collect(Collectors.toList());
@@ -117,28 +125,28 @@ public abstract class AbstractFilteredListReport<T> extends BasicBatchRequestFac
 
 
 
-	protected List<T> getOriginalList() {
+	protected List<DTO> getOriginalList() {
 		return originalList;
 	}
 
 
 
 
-	protected void setOriginalList(List<T> originalList) {
+	protected void setOriginalList(List<DTO> originalList) {
 		this.originalList = originalList;
 	}
 
 
 
 
-	protected List<T> getFilteredList() {
+	protected List<DTO> getFilteredList() {
 		return filteredList;
 	}
 
 
 
 
-	protected void setFilteredList(List<T> filteredList) {
+	protected void setFilteredList(List<DTO> filteredList) {
 		this.filteredList = filteredList;
 	}
 
@@ -174,6 +182,9 @@ public abstract class AbstractFilteredListReport<T> extends BasicBatchRequestFac
 
 
 	protected Map<String, String> getTitlePropertyMap() {
+		if(titlePropertyMap == null) {
+			titlePropertyMap = initialiseTitlePropertyMap();
+		}
 		return titlePropertyMap;
 	}
 
@@ -279,7 +290,9 @@ public abstract class AbstractFilteredListReport<T> extends BasicBatchRequestFac
 	 * @return a map with key property Name and value the corresponding title.
 	 * if the map is not initialised or a property is not set, it will return an empty string
 	 */
-	protected abstract Map<String, String> initialiseTitlePropertyMap();
+	protected  Map<String, String> initialiseTitlePropertyMap(){
+		return getTranslator().getColumns().stream().collect(Collectors.toMap(str -> str, str->str));
+	}
 
 
 	private List<Request> addTitle(Map<String, String> rowMap, int sheetNumber) {
@@ -400,7 +413,10 @@ public abstract class AbstractFilteredListReport<T> extends BasicBatchRequestFac
 	 * @param propertyName the name of the property 
 	 * @return null if the property shouldn't be inserted in the report, otherwise the number of the column starting from 0
 	 */
-	protected abstract Integer getColumnNumberForRowProperty(String propertyName);
+	protected Integer getColumnNumberForRowProperty(String propertyName) {
+		List<String> columns = getTranslator().getColumns();
+		return columns.contains(propertyName)?columns.indexOf(propertyName):null;
+	}
 
 	/**
 	 * Conver the object value in the userEnteredMode values to display of the column. Note that this is the
@@ -408,8 +424,22 @@ public abstract class AbstractFilteredListReport<T> extends BasicBatchRequestFac
 	 * @param rowObject the object as an element of the list in input
 	 * @return
 	 */
-	protected abstract Map<String, String> translateRowObjectToMap(T rowObject);
+	protected Map<String, String> translateRowObjectToMap(DTO dto){
+		return getTranslator().toMap(dto);
+	}
 	
 	
-	
+	protected DTODAOTranslator<DTO, DAO> getTranslator(){
+		if(translator == null) {
+			translator = (DTODAOTranslator<DTO, DAO>) applicationContext.getBean(getTranslatorClass());
+		}
+		return translator;
+	}
+
+
+	/**
+	 * The class that implements DTODAOTranslator which is the one that will translate the dto in dao and the values in dto and viceversa
+	 * @return
+	 */
+	protected abstract Class getTranslatorClass();
 }
